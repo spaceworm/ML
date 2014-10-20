@@ -1,0 +1,117 @@
+```
+#Submission for the Course "Practical Machine Learning": Raghav Mathur
+#========================================================
+```{r}
+###################################################
+## Set the working directory 
+setwd("C:\\Users\\849671\\Desktop\\practicalML")
+
+### Read in the training and test datasets as provided by the course.
+train <- read.csv("pml-training.csv", header = T)
+test <- read.csv("pml-testing.csv", header = T)
+
+
+
+### Preprocessing done in excel: The target variable 'classe' takes values from A #to E. I have created a new column in the raw data which takes the value 1 if #Classe = A, takes a value = 2 if Classe = B and so on till 5 for Classe = E.
+
+
+
+### Import the package 'randomForest' as we would attempt to execute a random #forest model to predict the 'classe' variable
+
+library(randomForest)
+
+### Set the seed to 1234
+set.seed(1234)
+
+
+### Break the training data file into two parts. Train and Validation files to #test out the performance of the Random Forest Model.
+
+samplingID = sample(1:dim(train)[1],size=dim(train)[1]/2,replace=F)
+train_sample = train[samplingID,]
+validation_sample = train[-samplingID,]
+
+
+
+### The way I chose these variables was by running the random forest code 4-5      # times once, on all the available predictive variable, then once again after      # keeping only the variables from left hand side 7,8,9... and again after keeping # the variables from the right hand side 159,158,157.. and so on.
+
+# All other combination of variables were giving a lower accuracy ranging from    # 34% to 80% and the training and validation accuracies were not in sync with    # each  other. Which indicated that those variable combinations had more noise   # than  signal.
+
+### Plots of the predictive variables with respect to the target variable
+### You will notice that all the predictive variables which ultimatily yielded a 
+### model accuracy of 97% had a good pattern with respect to the target variable. 
+
+
+plot(train_sample[,c(7)],train_sample[,c(160)])
+
+### Notice that the observations are grouped on the X Axis with respect to the   # various levels 1,2,3,4,5 for the predictive variable number 8 = "Roll Belt"
+
+plot(train_sample[,c(8)],train_sample[,c(160)])
+
+### Compare the chart above to the one below where the values of the variable    # 159= "magnet forearm_z" is spread across the entire X axis for the 5 levels of # the target variable. 
+
+plot(train_sample[,c(159)],train_sample[,c(160)])
+
+### The charts of the rest of the predictive variables are as below. Notice how   # the pattern evolves on the X axis values for the different target levels.
+
+plot(train_sample[,c(9)],train_sample[,c(160)])
+plot(train_sample[,c(10)],train_sample[,c(160)])
+plot(train_sample[,c(11)],train_sample[,c(160)])
+plot(train_sample[,c(37)],train_sample[,c(160)])
+plot(train_sample[,c(38)],train_sample[,c(160)])
+
+
+### Now Execute the Random Forest model using the syntax below. Do note that I am #using only the variables 7,8,9,10,11,37,38 to train the model. 
+
+### These variables are 'num_window','roll_belt','pitch_belt','yaw_belt',         #   'total_accel_belt','gyros_belt_x','gyros_belt_y'
+
+
+RF <- randomForest(train_sample[,c(7,8,9,10,11,37,38)],train_sample[,161] ,do.trace=TRUE,sampsize=c(5000),importance=TRUE,ntree=1000,forest=TRUE) 
+
+
+#### now predict the training sample from the random forest model.
+predict <- predict(RF,train_sample[, c(7,8,9,10,11,37,38)])
+
+#### Now write out the predictions of the training sample
+d1 <- cbind(round(predict), train_sample[,161])
+write.csv(d1,file="rf_train_sample.csv")
+
+#### Now write out the predictions of the validation sample
+predict <- predict(RF,validation_sample[, c(7,8,9,10,11,37,38)])
+d2 <- cbind(round(predict), validation_sample[,161])
+write.csv(d2,file="rf_validation_sample.csv")
+
+#### Read in the predictions of the training sample and validation sample. (Not    # the most efficient code but it helps me by actually checking out the predictions # in the CSV file)
+rf_train_sample      <- read.csv("rf_train_sample.csv", header = T)
+rf_validation_sample <- read.csv("rf_validation_sample.csv", header = T)
+
+#### Now I calculate the accuracy of predictions on the training and validation   # samples. 
+
+num_rows_train <- nrow(rf_train_sample)
+num_rows_valid <- nrow(rf_validation_sample)
+
+c1 = 0
+for (i in 1:num_rows_train) {
+  if( rf_train_sample[i,2] == rf_train_sample[i,3]){ (c1 = c1+1)}
+} 
+accuracy_train <- c1*100/num_rows_train
+
+#### The accuracy of the Random Forest model on the training sample split is:
+accuracy_train
+
+c2 = 0
+for (i in 1:num_rows_valid) {
+	if( rf_validation_sample[i,2] == rf_validation_sample[i,3]){ (c2 = c2+1)}
+} 
+
+accuracy_valid <- c2*100/num_rows_valid
+
+#### The accuracy of the Random Forest Model on the Validation Sample Split is:
+accuracy_valid
+
+
+#### And then because the training and validation samples have similar and high   # accuracies so we will go ahead and score out the test file from this RF model.   # My #model has yielded me a score of 20/20 in the assignment.
+
+predict <- predict(RF,test[, c(7,8,9,10,11,37,38)])
+write.csv(round(predict),file="rf_test.csv")
+```
+
